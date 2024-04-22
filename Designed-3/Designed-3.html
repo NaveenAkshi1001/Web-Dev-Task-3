@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TO-DO App</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #87CEEB; /* Sky blue background color */
+            overflow: hidden;
+        }
+
+        .sea-wave {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image: linear-gradient(to bottom, #87CEEB 50%, #FFFFFF 50%);
+            background-size: 100% 200%;
+            animation: sea-wave-animation 10s linear infinite;
+        }
+
+        @keyframes sea-wave-animation {
+            0% {
+                background-position: 0 0;
+            }
+            100% {
+                background-position: 0 -100%;
+            }
+        }
+
+        .container {
+            max-width: 600px;
+            margin: 50px auto;
+            background-color: #fff;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            position: relative; /* Ensure the container stays above the animated background */
+            z-index: 1; /* Ensure the container stays above the animated background */
+        }
+
+        h1 {
+            text-align: center;
+            color: #333;
+        }
+
+        form {
+            margin-bottom: 20px;
+            display: flex;
+            flex-wrap: wrap;
+        }
+
+        #taskInput {
+            flex: 1;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            font-size: 16px;
+            margin-right: 10px;
+            margin-bottom: 10px;
+        }
+
+        #prioritySelect {
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            font-size: 16px;
+            margin-right: 10px;
+            margin-bottom: 10px;
+        }
+
+        #deadlineInput {
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            font-size: 16px;
+            margin-right: 10px;
+            margin-bottom: 10px;
+            width: 200px;
+        }
+
+        button {
+            padding: 10px 20px;
+            background-color: #4caf50;
+            color: #fff;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            margin-bottom: 10px;
+        }
+
+        button:hover {
+            background-color: #45a049;
+        }
+
+        ul {
+            list-style-type: none;
+            padding: 0;
+        }
+
+        li {
+            margin-bottom: 10px;
+            padding: 10px;
+            border-radius: 5px;
+            background-color: #eee;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .task {
+            flex: 1;
+        }
+
+        .priority {
+            margin-right: 10px;
+        }
+
+        .completed {
+            text-decoration: line-through;
+            color: #999;
+        }
+
+        .delete {
+            background-color: #f44336;
+            color: #fff;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            padding: 5px 10px;
+        }
+
+        .delete:hover {
+            background-color: #da190b;
+        }
+
+        #taskFilters {
+            margin-bottom: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="sea-wave"></div> <!-- Animated sea wave background -->
+    <div class="container">
+        <h1>TO-DO App</h1>
+        <form id="taskForm">
+            <input type="text" id="taskInput" placeholder="Add a new task...">
+            <select id="prioritySelect">
+                <option value="low">Low</option>
+                <option value="medium">Medium</option>
+                <option value="high">High</option>
+            </select>
+            <input type="text" id="deadlineInput" placeholder="Select Deadline...">
+            <button type="submit">Add Task</button>
+        </form>
+        <div id="taskSummary"></div>
+        <div id="taskFilters">
+            <label>
+                <input type="checkbox" id="showCompleted"> Show Completed Tasks
+            </label>
+        </div>
+        <ul id="taskList"></ul>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>    <script>
+        document.addEventListener("DOMContentLoaded", function() {
+            const taskForm = document.getElementById("taskForm");
+            const taskInput = document.getElementById("taskInput");
+            const prioritySelect = document.getElementById("prioritySelect");
+            const deadlineInput = document.getElementById("deadlineInput");
+            const taskList = document.getElementById("taskList");
+            const showCompletedCheckbox = document.getElementById("showCompleted");
+            const taskSummary = document.getElementById("taskSummary");
+
+            let tasks = [];
+
+            const datePicker = flatpickr(deadlineInput, {
+                enableTime: false,
+                dateFormat: "Y-m-d",
+            });
+
+            loadTasks();
+
+            taskForm.addEventListener("submit", function(event) {
+                event.preventDefault();
+                const taskValue = taskInput.value.trim();
+                const priority = prioritySelect.value;
+                const deadline = datePicker.selectedDates[0];
+                if (taskValue !== "") {
+                    addTask(taskValue, priority, deadline);
+                    taskInput.value = "";
+                    datePicker.clear();
+                    updateTaskSummary();
+                }
+            });
+
+            showCompletedCheckbox.addEventListener("change", function() {
+                filterTasks();
+            });
+
+            function addTask(taskValue, priority, deadline) {
+                const taskItem = document.createElement("li");
+                taskItem.innerHTML = `
+                    <span class="task">${taskValue}</span>
+                    <span class="priority">${priority}</span>
+                    <span class="deadline">${deadline ? deadline.toLocaleDateString() : ''}</span>
+                    <button class="delete">Delete</button>
+                `;
+                taskList.appendChild(taskItem);
+                tasks.push({ task: taskValue, priority: priority, deadline: deadline, completed: false });
+                saveTasks();
+            }
+
+            function filterTasks() {
+                const showCompleted = showCompletedCheckbox.checked;
+                taskList.innerHTML = "";
+                tasks.forEach(task => {
+                    if (showCompleted || task.completed === false) {
+                        const taskItem = document.createElement("li");
+                        taskItem.innerHTML = `
+                            <span class="task">${task.task}</span>
+                            <span class="priority">${task.priority}</span>
+                            <span class="deadline">${task.deadline ? task.deadline.toLocaleDateString() : ''}</span>
+                            <button class="delete">Delete</button>
+                        `;
+                        taskList.appendChild(taskItem);
+                    }
+                });
+            }
+
+            function loadTasks() {
+                if (localStorage.getItem("tasks")) {
+                    tasks = JSON.parse(localStorage.getItem("tasks"));
+                    filterTasks();
+                    updateTaskSummary();
+                }
+            }
+
+            function saveTasks() {
+                localStorage.setItem("tasks", JSON.stringify(tasks));
+            }
+
+            function updateTaskSummary() {
+                const totalTasks = tasks.length;
+                const completedTasks = tasks.filter(task => task.completed).length;
+                const pendingTasks = totalTasks - completedTasks;
+                taskSummary.innerHTML = `Total Tasks: ${totalTasks} | Completed: ${completedTasks} | Pending: ${pendingTasks}`;
+            }
+
+            taskList.addEventListener("click", function(event) {
+                if (event.target.classList.contains("delete")) {
+                    const taskIndex = Array.from(taskList.children).indexOf(event.target.parentElement);
+                    tasks.splice(taskIndex, 1);
+                    event.target.parentElement.remove();
+                    saveTasks();
+                    updateTaskSummary();
+                } else if (event.target.classList.contains("task")) {
+                    event.target.classList.toggle("completed");
+                    const taskIndex = Array.from(taskList.children).indexOf(event.target.parentElement);
+                    tasks[taskIndex].completed = !tasks[taskIndex].completed;
+                    saveTasks();
+                    updateTaskSummary();
+                }
+            });
+        });
+    </script>
+</body>
+</html>
